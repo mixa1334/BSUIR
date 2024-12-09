@@ -38,10 +38,10 @@ FROM teacher
 WHERE teacher.speciality LIKE "%АСОИ%";
 
 -- 1.8
-SELECT DISTINCT teacher.surname
+SELECT teacher.surname
 FROM teacher
-JOIN timetable ON teacher.id = teacher_id
-WHERE audience_number = 210;
+WHERE EXISTS (SELECT * FROM timetable
+		WHERE timetable.teacher_id = teacher.id AND audience_number = 210);
 
 -- 1.9
 SELECT subject.name AS subject, student_group.name AS group_name
@@ -62,9 +62,14 @@ FROM student_group
 WHERE speciality LIKE "ЭВМ";
 
 -- 1.12
-SELECT id
+SELECT teacher.id
 FROM teacher
-WHERE speciality LIKE "%ЭВМ%";
+WHERE EXISTS (
+	SELECT *
+    FROM timetable
+    INNER JOIN student_group ON student_group_id = student_group.id
+    WHERE teacher_id = teacher.id AND student_group.speciality LIKE "%ЭВМ%"
+);
 
 -- 1.13
 SELECT subject_id
@@ -124,18 +129,20 @@ JOIN teacher ON teacher.id = timetable.teacher_id
 WHERE department LIKE "ЭВМ" AND speciality LIKE "%АСОИ%";
 
 -- 1.19
-SELECT DISTINCT student_group_id
-FROM timetable
-JOIN teacher ON teacher.id = teacher_id
-JOIN student_group ON student_group.id = student_group_id
-WHERE teacher.speciality = student_group.speciality;
+SELECT student_group.id
+FROM student_group
+WHERE student_group.speciality IN (
+	SELECT DISTINCT teacher.speciality
+    FROM teacher
+);
 
 -- 1.20
 SELECT DISTINCT teacher_id
 FROM timetable
-JOIN teacher ON teacher.id = teacher_id
-JOIN student_group ON student_group.id = student_group_id
-WHERE teacher.department LIKE "ЭВМ" AND student_group.speciality = teacher.speciality;
+INNER JOIN teacher ON teacher_id = teacher.id
+INNER JOIN subject ON subject_id = subject.id
+INNER JOIN student_group ON student_group_id = student_group_id
+WHERE teacher.department LIKE "ЭВМ" AND student_group.speciality = subject.speciality;
 
 -- 1.21
 SELECT DISTINCT student_group.speciality
@@ -180,18 +187,15 @@ WHERE name NOT LIKE "АС-8" AND student_group_id NOT IN (
 -- 1.25
 SELECT DISTINCT student_group_id
 FROM timetable
-JOIN student_group ON id = student_group_id
 WHERE student_group_id NOT IN (
-	SELECT DISTINCT student_group_id
+	SELECT student_group_id
     FROM timetable
-    JOIN student_group ON id = student_group_id
     WHERE subject_id IN (
-		SELECT DISTINCT subject_id
+		SELECT subject_id
 		FROM timetable
-		JOIN teacher ON id = teacher_id
-        WHERE teacher_id LIKE "430Л"
-	)
-);
+		WHERE teacher_id LIKE "430Л"
+    )
+); 
 
 -- 1.26
 SELECT DISTINCT teacher_id
